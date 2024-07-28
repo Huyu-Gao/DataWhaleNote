@@ -1,3 +1,53 @@
 The following note is used to record my views and experience in 2024 3rd DataWhale Camp for task1 in 2024.7.28
-Here is mainly for Baseline
+This is created to understand Baseline Project.
 
+1.Use Related Libraries
+
+    import numpy as np
+    import pandas as pd
+    from pathlib import Path
+    from sklearn.linear_model import LinearRegression
+
+2.Preprocessing Data
+    This step makes the data more clear and convenient to deal.
+    
+    base_path = Path("data")  # 确保数据都放在同级的data目录下
+    
+    # 读取市场数据
+    electricity_price = pd.read_csv(base_path / "electricity price.csv")
+    # 读取市场主体（各发电机组）数据
+    unit = pd.read_csv(base_path / "unit.csv")
+    
+    """
+    准备示例提交数据sample_submit
+    1. electricity_price["clearing price (CNY/MWh)"].isna()找到出清价格为缺失值的行，即要预测的目标
+    2. 去除demand列，符合最后的提交格式 
+    """
+    
+    sample_submit = electricity_price[electricity_price["clearing price (CNY/MWh)"].isna()].drop(columns="demand")//Target to predict
+    sample_submit.to_csv(base_path / "sample_submit.csv", index=False)
+
+3.Timestamp
+    # 将day和time列合并成timestamp列，便于提取时间戳特征
+    electricity_price["timestamp"] = pd.to_datetime(
+        electricity_price["day"] + " " + electricity_price["time"].str.replace("24:00:00", "00:00"))//trans 2 list into timestamp
+    
+    # 处理24:00:00的情况，即表示第二天的00:00:00
+    mask = electricity_price['timestamp'].dt.time == pd.Timestamp('00:00:00').time()
+    
+    # 需要将这些行的日期部分加一天
+    electricity_price.loc[mask, 'timestamp'] += pd.Timedelta(days=1)
+    
+    # 设置列的顺序，同时去除day和time列
+    electricity_price = electricity_price[["timestamp", "demand", "clearing price (CNY/MWh)"]]
+
+4.ABM
+    Agent-Based Modeling (ABM)** is a computational method that simulates the complex behavior and dynamics of a system. 
+    It models the individuals in the system (called "agents") and their interaction rules. Each agent has unique properties and behaviors. 
+    The ABM model helps understand the behavior and evolution of complex systems by simulating the interactions between agents and observing macro-level patterns and phenomena.
+
+5.Marginal cost pricing
+    Each unit quotes its own cost per kilowatt-hour of electricity produced, without considering market information and other unit information. 
+    By analogy, it only sells goods at cost (in fact, this is the long-term equilibrium state of a perfectly competitive market)
+    Then, the bids are sorted from low to high, and the bids are accepted in turn until the accumulated power exceeds the total demand and the market reaches a clearing state, 
+    and the last satisfied bid is used as an estimate of the market clearing price.
